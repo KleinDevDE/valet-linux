@@ -59,7 +59,42 @@ If you have **secured** a domain you will not be able to share it through Ngrok.
 
 ## What files does Valet _Linux_ change?
 
-Valet 2.0 will overwrite the Nginx, PhpFPM config files. If you've previously configured Nginx please backup your files before upgrading.
+Valet 2.0 will overwrite the Nginx, PhpFPM config files.  
+If you've previously configured Nginx please backup your files before upgrading.  
+
+
+<details>
+<summary>Changed files in detail</summary>
+State from 07.02.2025  
+
+- **system**
+  - Backup `/etc/resolv.conf` => `/etc/resolv.conf.bak`
+  - Replace `/etc/resolv.conf`
+  - Add `/usr/local/bin/valet`
+  - Add `/etc/sudoers.d/valet`
+  - Restore `/etc/rc.local.bkp` => `/etc/rc.local`
+  - Add `/etc/NetworkManager/conf.d/valet.conf`
+- **dnsmasq**
+    - Backup `/etc/dnsmasq.conf` => `/etc/dnsmasq.conf.bkp`
+  - Replace `/etc/dnsmasq.conf`
+  - Add `/etc/dnsmasq.d/valet`
+  - Add `/etc/dnsmasq.d/options`
+- **Nginx**
+  - Backup `/etc/nginx/nginx.conf` => `/etc/nginx/nginx.conf.bkp`
+  - Replace `/etc/nginx/nginx.conf`
+  - Add `/etc/nginx/sites-available/valet.conf`
+  - Add `/etc/nginx/sites-enabled/valet.conf`
+- **PhpFPM**
+    - Backup`conf.d/www.conf` => `conf.d/www.conf-backup`
+  - Add `conf.d/valet.conf`
+  - Add `conf.d/php-memory-limits.ini`
+  - Add `conf.d/error_log.ini`
+- **Valet**
+  - Add `/opt/valet-linux/`
+  - Add `~/.valet/`
+
+</details>
+
 
 
 ## Why is my network connection dropped after installing or changing the TLD?
