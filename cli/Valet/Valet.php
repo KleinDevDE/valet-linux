@@ -13,6 +13,7 @@ use Valet\PackageManagers\Homebrew;
 use Valet\PackageManagers\PackageKit;
 use Valet\PackageManagers\Pacman;
 use Valet\PackageManagers\Yum;
+use Valet\PackageManagers\Zypper;
 use Valet\ServiceManagers\LinuxService;
 use Valet\ServiceManagers\Systemd;
 
@@ -128,6 +129,7 @@ class Valet
             Dnf::class,
             Pacman::class,
             Yum::class,
+            Zypper::class,
             PackageKit::class,
             Eopkg::class,
         ])->first(static function ($pm) {

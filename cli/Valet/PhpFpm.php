@@ -8,6 +8,7 @@ use Valet\PackageManagers\Homebrew;
 use Valet\Contracts\ServiceManager;
 use Valet\PackageManagers\Dnf;
 use Valet\PackageManagers\Pacman;
+use Valet\PackageManagers\Zypper;
 
 class PhpFpm
 {
@@ -546,6 +547,10 @@ class PhpFpm
 
         if ($this->pm instanceof Pacman) {
             return null;
+        }
+
+        if ($this->pm instanceof Zypper && !$this->version) {
+            $this->version = explode(".", PHP_VERSION)[0];
         }
 
         if (!$this->version) {
