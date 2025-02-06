@@ -115,6 +115,10 @@ cd ~/.valet/CA
 
 [Relate Issue](https://github.com/cpriego/valet-linux/issues/233)
 
+## No internet after `valet install` (Cannot resolve hostnames)
+Check if dnsmasq has the permission to read the file `/opt/valet-linux/dns-servers`.  
+Applications like AppArmor could prevent dnsmasq from reading that file.
+
 
 ## Any other tips?
 
