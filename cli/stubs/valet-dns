@@ -6,6 +6,7 @@ DNSHEAD="${WORKDIR}/custom-nameservers"
 LOGFILE="${WORKDIR}/watch.log"
 VRESOLV="${WORKDIR}/resolv.conf"
 RESOLV="/etc/resolv.conf"
+LOCKFILE="${WORKDIR}/update.lock"
 
 function unique() {
     # Function to remove duplicated lines (even when they are not contiguous)
@@ -33,6 +34,13 @@ function getDirs() {
 
     readarray -t TARRAY <<< "$(find /run -path '/run/user' -prune -o -path '/run/media' -prune -o ! -readable -prune -o -name 'resolv.conf' -print)"
 
+    # readarray produces one empty element from an empty here-string
+    # when find returns no results; filter it out to avoid an empty
+    # DIR entry that would default find to scanning /
+    if [[ ${#TARRAY[@]} -eq 1 && -z "${TARRAY[0]}" ]]; then
+        TARRAY=()
+    fi
+
     # Find nameserver files in the /run/NetworkManager folder (as they do not have a standard name)
     if [[ ! -f "/run/NetworkManager/resolv.conf" && -d "/run/NetworkManager" ]]; then
         TARRAY=(${TARRAY[@]} '/run/NetworkManager/')
@@ -50,26 +58,32 @@ function getDirs() {
 }
 
 function updateNameservers() {
-    # Read all of the nameserver files at once, filter lines starting with 'nameserver'
-    # and exclude the ones containing 127.0.0.1 (localhost)
+    # Use flock to prevent concurrent runs — rapid inotify events or the
+    # symlinkResolv feedback loop otherwise spawn overlapping find
+    # processes that accumulate indefinitely
+    (
+        flock -n 200 || { echo "$(date) updateNameservers: locked, skipping concurrent run" >> "$LOGFILE"; exit 0; }
 
-    getFiles
+        # Read all of the nameserver files at once, filter lines starting with 'nameserver'
+        # and exclude the ones containing 127.0.0.1 (localhost)
+        getFiles
 
-    echo "${FILES[@]}" | tee "${WORKDIR}/resolvfiles.log" &>/dev/null
+        echo "${FILES[@]}" | tee "${WORKDIR}/resolvfiles.log" &>/dev/null
 
-    cat "$DNSHEAD" | unique | tee "$DNSFILE" &>/dev/null
-    cat "${FILES[@]}" | grep -i '^nameserver' | grep -vE '127\.(0\.){2}\d{1,3}' | unique | tee -a "$DNSFILE" &>/dev/null
+        cat "$DNSHEAD" | unique | tee "$DNSFILE" &>/dev/null
+        cat "${FILES[@]}" | grep -i '^nameserver' | grep -vE '127\.(0\.){2}\d{1,3}' | unique | tee -a "$DNSFILE" &>/dev/null
 
-    symlinkResolv
+        symlinkResolv
 
-    cat "${FILES[@]}" | grep -v '^nameserver' | grep -v '^#' | unique | tee "$VRESOLV" &>/dev/null
-    echo 'nameserver 127.0.0.1' >> "$VRESOLV"
+        cat "${FILES[@]}" | grep -v '^nameserver' | grep -v '^#' | unique | tee "$VRESOLV" &>/dev/null
+        echo 'nameserver 127.0.0.1' >> "$VRESOLV"
 
-    # Add "search" and "domain" directives to /etc/resolv.conf
-    # chattr -i "$RESOLV" && \
-    # cat "${FILES[@]}" | grep -v '^nameserver' | grep -v '^#' | unique | tee "$VRESOLV" &>/dev/null && \
-    # echo 'nameserver 127.0.0.1' >> "$VRESOLV" && \
-    # chattr +i "$RESOLV"
+        # Add "search" and "domain" directives to /etc/resolv.conf
+        # chattr -i "$RESOLV" && \
+        # cat "${FILES[@]}" | grep -v '^nameserver' | grep -v '^#' | unique | tee "$VRESOLV" &>/dev/null && \
+        # echo 'nameserver 127.0.0.1' >> "$VRESOLV" && \
+        # chattr +i "$RESOLV"
+    ) 200>"$LOCKFILE"
 }
 
 function getFiles() {
@@ -77,11 +91,22 @@ function getFiles() {
     local TARRAY=()
 
     for DIR in "${DIRS[@]}"; do
+        # Ensure DIR is non-empty to avoid find defaulting to /
+        [[ -z "$DIR" ]] && continue
+
         readarray -t TARRAY <<< "$(find ${DIR} -path ! -readable -prune -o -name 'resolv.conf' -print)"
+
+        # Guard against empty readarray from empty find output
+        if [[ ${#TARRAY[@]} -eq 1 && -z "${TARRAY[0]}" ]]; then
+            TARRAY=()
+        fi
 
         # Find nameserver files in the /run/resolvconf/interface folder (as they do not have a standard name)
         if [[ "$DIR" = "/run/resolvconf/interface" ]]; then
             readarray -t TARRAY <<< "$(find ${DIR} ! -readable -prune -o -type f -print)"
+            if [[ ${#TARRAY[@]} -eq 1 && -z "${TARRAY[0]}" ]]; then
+                TARRAY=()
+            fi
         fi
 
         FILES=(${FILES[@]} ${TARRAY[@]})
@@ -106,8 +131,7 @@ function watchDirs() {
 
 function main() {
     # Create dns file in case it does not exists
-    if [[ ! -f "$DNSHEAD" ]]
-    then
+    if [[ ! -f "$DNSHEAD" ]]; then
         echo "Creating default $DNSHEAD file"
         echo nameserver 1.1.1.1 > $DNSHEAD
     fi
