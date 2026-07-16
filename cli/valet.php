@@ -42,6 +42,8 @@ $app->command('install [--ignore-selinux]', function ($ignoreSELinux) {
     Valet::symlinkToUsersBin();
 
     output(PHP_EOL . '<info>Valet installed successfully!</info>');
+
+    return 0;
 })->descriptions('Install the Valet services', [
     '--ignore-selinux' => 'Skip SELinux checks',
 ]);
@@ -61,7 +63,9 @@ if (is_dir(VALET_HOME_PATH)) {
      */
     $app->command('domain [domain]', function ($domain = null) {
         if ($domain === null) {
-            return info(Configuration::read()['domain']);
+            info(Configuration::read()['domain']);
+
+            return 0;
         }
 
         DnsMasq::updateDomain(
@@ -75,6 +79,8 @@ if (is_dir(VALET_HOME_PATH)) {
         Nginx::restart();
 
         info('Your Valet domain has been updated to [' . $domain . '].');
+
+        return 0;
     })->descriptions('Get or set the domain used for Valet sites');
 
     /**
@@ -85,7 +91,7 @@ if (is_dir(VALET_HOME_PATH)) {
             info('Current Nginx port (HTTP): ' . Configuration::get('port', 80));
             info('Current Nginx port (HTTPS): ' . Configuration::get('https_port', 443));
 
-            return;
+            return 0;
         }
 
         $port = trim($port);
@@ -104,6 +110,8 @@ if (is_dir(VALET_HOME_PATH)) {
 
         $protocol = $https ? 'HTTPS' : 'HTTP';
         info("Your Nginx {$protocol} port has been updated to [{$port}].");
+
+        return 0;
     })->descriptions('Get or set the port number used for Valet sites');
 
     /**
@@ -128,6 +136,8 @@ if (is_dir(VALET_HOME_PATH)) {
         Configuration::addPath($path ?: getcwd());
 
         info(($path === null ? "This" : "The [{$path}]") . " directory has been added to Valet's paths.");
+
+        return 0;
     })->descriptions('Register the current working (or specified) directory with Valet');
 
     /**
@@ -137,6 +147,8 @@ if (is_dir(VALET_HOME_PATH)) {
         Configuration::removePath($path ?: getcwd());
 
         info(($path === null ? "This" : "The [{$path}]") . " directory has been removed from Valet's paths.");
+
+        return 0;
     })->descriptions('Remove the current working (or specified) directory from Valet\'s list of paths');
 
     /**
@@ -146,6 +158,8 @@ if (is_dir(VALET_HOME_PATH)) {
         PhpFpm::status();
         Nginx::status();
         DnsMasq::status();
+
+        return 0;
     })->descriptions('View Valet service status');
 
     /**
@@ -159,6 +173,8 @@ if (is_dir(VALET_HOME_PATH)) {
         if ($secure) {
             $this->runCommand('secure '.$name);
         }
+
+        return 0;
     })->descriptions('Link the current working directory to Valet');
 
     /**
@@ -168,6 +184,8 @@ if (is_dir(VALET_HOME_PATH)) {
         $links = Site::links();
 
         table(['Site', 'SSL', 'URL', 'Path', 'PHP'], $links->all());
+
+        return 0;
     })->descriptions('Display all of the registered Valet links');
 
     /**
@@ -177,6 +195,8 @@ if (is_dir(VALET_HOME_PATH)) {
         Site::unlink($name = $name ?: basename(getcwd()));
 
         info('The [' . $name . '] symbolic link has been removed.');
+
+        return 0;
     })->descriptions('Remove the specified Valet link');
 
     /**
@@ -190,6 +210,8 @@ if (is_dir(VALET_HOME_PATH)) {
         Nginx::restart();
 
         info('The [' . $url . '] site has been secured with a fresh TLS certificate.');
+
+        return 0;
     })->descriptions('Secure the given domain with a trusted TLS certificate');
 
     /**
@@ -203,6 +225,8 @@ if (is_dir(VALET_HOME_PATH)) {
         Nginx::restart();
 
         info('The [' . $url . '] site will now serve traffic over HTTP.');
+
+        return 0;
     })->descriptions('Stop serving the given domain over HTTPS and remove the trusted TLS certificate');
 
     /**
@@ -211,6 +235,8 @@ if (is_dir(VALET_HOME_PATH)) {
     $app->command('proxy domain host [--secure]', function ($domain, $host, $secure) {
         Site::proxyCreate($domain, $host, $secure);
         Nginx::restart();
+
+        return 0;
     })->descriptions('Create an Nginx proxy site for the specified host. Useful for docker, mailhog etc.', [
         '--secure' => 'Create a proxy with a trusted TLS certificate',
     ]);
@@ -221,6 +247,8 @@ if (is_dir(VALET_HOME_PATH)) {
     $app->command('unproxy domain', function ($domain) {
         Site::proxyDelete($domain);
         Nginx::restart();
+
+        return 0;
     })->descriptions('Delete an Nginx proxy config.');
 
     /**
@@ -230,6 +258,8 @@ if (is_dir(VALET_HOME_PATH)) {
         $proxies = Site::proxies();
 
         table(['Site', 'SSL', 'URL', 'Host'], $proxies->all());
+
+        return 0;
     })->descriptions('Display all of the proxy sites');
 
     /**
@@ -245,6 +275,8 @@ if (is_dir(VALET_HOME_PATH)) {
         } else {
             warning('Valet could not determine which driver to use for this site.');
         }
+
+        return 0;
     })->descriptions('Determine which Valet driver serves the current working directory');
 
     /**
@@ -258,6 +290,8 @@ if (is_dir(VALET_HOME_PATH)) {
         } else {
             warning('No paths have been registered.');
         }
+
+        return 0;
     })->descriptions('Get all of the paths registered with Valet');
 
     /**
@@ -267,6 +301,8 @@ if (is_dir(VALET_HOME_PATH)) {
         $url = 'http://' . ($domain ?: Site::host(getcwd())) . '.' . Configuration::read()['domain'] . '/';
 
         passthru('xdg-open ' . escapeshellarg($url));
+
+        return 0;
     })->descriptions('Open the site for the current (or specified) directory in your browser');
 
     /**
@@ -274,6 +310,8 @@ if (is_dir(VALET_HOME_PATH)) {
      */
     $app->command('share', function () {
         warning("It looks like you are running `cli/valet.php` directly, please use the `valet` script in the project root instead.");
+
+        return 0;
     })->descriptions('Generate a publicly accessible URL for your project');
 
     /**
@@ -281,6 +319,8 @@ if (is_dir(VALET_HOME_PATH)) {
      */
     $app->command('fetch-share-url', function () {
         output(Ngrok::currentTunnelUrl());
+
+        return 0;
     })->descriptions('Get the URL to the current Ngrok tunnel');
 
     /**
@@ -292,6 +332,8 @@ if (is_dir(VALET_HOME_PATH)) {
         DnsMasq::restart();
 
         info('Valet services have been started.');
+
+        return 0;
     })->descriptions('Start the Valet services');
 
     /**
@@ -303,6 +345,8 @@ if (is_dir(VALET_HOME_PATH)) {
         DnsMasq::restart();
 
         info('Valet services have been restarted.');
+
+        return 0;
     })->descriptions('Restart the Valet services');
 
     /**
@@ -314,6 +358,8 @@ if (is_dir(VALET_HOME_PATH)) {
         DnsMasq::stop();
 
         info('Valet services have been stopped.');
+
+        return 0;
     })->descriptions('Stop the Valet services');
 
     /**
@@ -327,6 +373,8 @@ if (is_dir(VALET_HOME_PATH)) {
         Valet::uninstall();
 
         info('Valet has been uninstalled.');
+
+        return 0;
     })->descriptions('Uninstall the Valet services');
 
     /**
@@ -343,6 +391,8 @@ if (is_dir(VALET_HOME_PATH)) {
             warning('Updating now...');
             passthru($script . ' update');
         }
+
+        return 0;
     })->descriptions('Update Valet Linux and clean up cruft');
 
     /**
@@ -353,6 +403,8 @@ if (is_dir(VALET_HOME_PATH)) {
         info('This does not affect php -v.');
         PhpFpm::changeVersion($preferedversion);
         info('php-fpm version successfully changed! 🎉');
+
+        return 0;
     })->descriptions('Set the PHP-fpm version to use, enter "default" or leave empty to use version: ' . PhpFpm::getVersion(true));
 
 
@@ -369,6 +421,8 @@ if (is_dir(VALET_HOME_PATH)) {
         }
 
         PhpFpm::isolateDirectory($site, $phpVersion);
+
+        return 0;
     })->descriptions('Change the version of PHP used by Valet to serve the current working directory', [
         'phpVersion' => 'The PHP version you want to use; e.g php@8.1',
         '--site' => 'Specify the site to isolate (e.g. if the site isn\'t linked as its directory name)',
@@ -383,6 +437,8 @@ if (is_dir(VALET_HOME_PATH)) {
         }
 
         PhpFpm::unIsolateDirectory($site);
+
+        return 0;
     })->descriptions('Stop customizing the version of PHP used by Valet to serve the current working directory', [
         '--site' => 'Specify the site to un-isolate (e.g. if the site isn\'t linked as its directory name)',
     ]);
@@ -394,6 +450,8 @@ if (is_dir(VALET_HOME_PATH)) {
         $sites = PhpFpm::isolatedDirectories();
 
         table(['Path', 'PHP Version'], $sites->all());
+
+        return 0;
     })->descriptions('List all sites using isolated versions of PHP.');
 }
 
