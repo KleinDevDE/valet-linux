@@ -18,7 +18,7 @@ use Silly\Application;
  */
 Container::setInstance(new Container());
 
-$version = 'v2.4.4';
+$version = 'v2.4.5';
 
 $app = new Application('Valet', $version);
 
